@@ -1,0 +1,14 @@
+---
+- name: Install all packages in local maven repository
+  hosts: localhost
+  vars_files:
+    - '{{ playbook_dir }}/../vars/git-repositories.yml'
+  tasks:
+      - name: mvn install
+        shell: '[ -f pom.xml ] && mvn install || echo "skipping, no pom.xml"'
+        args:
+          chdir: '{{ repos_destination }}/{{ item.name }}'
+          executable: /bin/bash
+        environment:
+          PATH: "{{ ansible_env.PATH }}:$HOME/.jenv/bin:$HOME/bin/mvn" # To make sure .java-version and mvnvm.properties is picked
+        loop: '{{ repositories }}'

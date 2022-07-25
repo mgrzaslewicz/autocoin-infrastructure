@@ -1,0 +1,29 @@
+---
+- name: Run latest versions of frontend
+  hosts: localhost
+  vars_files:
+    - '{{ playbook_dir }}/../vars/git-repositories.yml'
+  tasks:
+    - name: Check if frontend node_modules is present
+      stat:
+        path: '{{ frontend_folder }}/node_modules'
+      register: frontend_node_modules_found
+    - name: Run npm install for frontend if needed
+      shell: |
+        source ~/.nvm/nvm.sh &&
+        nvm install &&
+        nvm use &&
+        npm install
+      args:
+        chdir: '{{ frontend_folder }}'
+        executable: /bin/bash
+      when: not frontend_node_modules_found.stat.exists
+    - name: Run frontend
+      shell: |
+        source ~/.nvm/nvm.sh &&
+        nvm install &&
+        nvm use &&
+        npm run start &
+      args:
+        chdir: '{{ frontend_folder }}'
+        executable: /bin/bash

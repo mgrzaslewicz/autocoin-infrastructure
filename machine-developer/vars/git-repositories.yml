@@ -1,0 +1,21 @@
+github_ssh_key_file: ~/.ssh/id_ed25519_autocoin_github
+bitbucket_ssh_key_file: ~/.ssh/id_rsa_autocoin_bitbucket
+repos_destination: ~/repos/autocoin
+
+auth_service_folder: '{{ repos_destination }}/autocoin-auth-service'
+frontend_folder: '{{ repos_destination }}/autocoin-trader-frontend'
+
+# order is important for compiling and installing in local maven repository
+# autocoin-metrics-client and autocoin-exchange-engine are needed as a dependencies for backend services
+repositories:
+  - { 'name': 'autocoin-metrics-client', 'repo': 'git@bitbucket.org:autocointrader/autocoin-metrics-client.git', 'private_key': '{{ bitbucket_ssh_key_file }}' }
+  - { 'name': 'autocoin-exchange-engine', 'repo': 'git@bitbucket.org:autocointrader/autocoin-exchange-engine.git', 'private_key': '{{ bitbucket_ssh_key_file }}' }
+  - { 'name': 'autocoin-balance-monitor', 'repo': 'git@github.com:mgrzaslewicz/autocoin-balance-monitor.git', 'private_key': '{{ github_ssh_key_file }}' }
+  - { 'name': 'autocoin-arbitrage-monitor', 'repo': 'git@github.com:mgrzaslewicz/autocoin-arbitrage-monitor.git', 'private_key': '{{ github_ssh_key_file }}' }
+  - { 'name': 'autocoin-trader-frontend', 'repo': 'git@bitbucket.org:autocointrader/autocoin-trader-frontend.git', 'private_key': '{{ bitbucket_ssh_key_file }}' }
+  - { 'name': 'autocoin-exchange-mediator', 'repo': 'git@bitbucket.org:autocointrader/autocoin-exchange-mediator.git', 'private_key': '{{ bitbucket_ssh_key_file }}' }
+  - { 'name': 'autocoin-auth-service', 'repo': 'git@bitbucket.org:autocointrader/autocoin-auth-service.git', 'private_key': '{{ bitbucket_ssh_key_file }}' }
+  - { 'name': 'autocoin-db', 'repo': 'git@bitbucket.org:autocointrader/autocoin-db.git', 'private_key': '{{ bitbucket_ssh_key_file }}' }
+  - { 'name': 'autocoin-provision-deprecated', 'repo': 'git@bitbucket.org:autocointrader/autocoin-puppet.git', 'private_key': '{{ bitbucket_ssh_key_file }}' }
+  - { 'name': 'autocoin-infrastructure', 'repo': 'git@github.com:mgrzaslewicz/autocoin-infrastructure.git', 'private_key': '{{ github_ssh_key_file }}' }
+  - { 'name': 'autocoin-tig-monitoring', 'repo': 'git@bitbucket.org:autocointrader/autocoin-tig-monitoring.git', 'private_key': '{{ bitbucket_ssh_key_file }}' }

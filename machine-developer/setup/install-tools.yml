@@ -1,0 +1,93 @@
+---
+- name: Install all required software
+  hosts: localhost
+  tasks:
+    - name: Ensure git is installed
+      become: true
+      apt:
+        state: present
+        name: git-all
+
+    - name: Ensure Java 14 is installed
+      become: true
+      apt:
+        state: present
+        name: openjdk-14-jdk
+
+    - name: Ensure Java 17 is installed
+      become: true
+      apt:
+        state: present
+        name: openjdk-17-jdk
+
+    - name: Ensure docker is installed
+      become: true
+      apt:
+        name: docker.io
+        state: present
+
+    - name: Create Docker registry
+      become: true
+      docker_container:
+        name: registry
+        image: registry:2
+        state: started
+        restart_policy: unless-stopped
+
+    - name: Clone jenv repository
+      git:
+        repo: https://github.com/jenv/jenv.git
+        dest: ~/.jenv
+        update: yes
+
+    - name: Ensure jenv is added to PATH in zsh
+      lineinfile:
+        path: ~/.zshrc
+        state: present
+        line: export PATH="$HOME/.jenv/bin:$PATH"
+
+    - name: Ensure jenv is added to PATH in bash
+      lineinfile:
+        path: ~/.bashrc
+        state: present
+        line: export PATH="$HOME/.jenv/bin:$PATH"
+
+    - name: Register JVM versions in jenv
+      shell: |
+        jenv add /usr/lib/jvm/java-1.8.0-openjdk-amd64 &&
+        jenv add /usr/lib/jvm/java-1.14.0-openjdk-amd64 &&
+        jenv add /usr/lib/jvm/java-1.17.0-openjdk-amd64
+      environment:
+        PATH: "{{ ansible_env.PATH }}:$HOME/.jenv/bin"
+      args:
+        executable: /bin/bash
+
+    - name: Install mvnvm
+      shell: mkdir -p ~/bin && curl -s https://bitbucket.org/mjensen/mvnvm/raw/master/mvn > ~/bin/mvn && chmod 0755 ~/bin/mvn
+      args:
+        creates: "~/bin/mvn"
+
+    - name: Install nvm
+      shell: >
+        curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.1/install.sh | bash
+      args:
+        creates: "~/.nvm/nvm.sh"
+
+    - name: Add nvm variables to bashrc
+      lineinfile:
+        path: ~/.bashrc
+        state: present
+        line: '{{ item }}'
+      loop:
+        - 'export NVM_DIR="$HOME/.nvm"'
+        - '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm'
+        - '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion'
+    - name: Add nvm variables to zshrc
+      lineinfile:
+        path: ~/.zshrc
+        state: present
+        line: '{{ item }}'
+      loop:
+        - 'export NVM_DIR="$HOME/.nvm"'
+        - '[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm'
+        - '[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion'

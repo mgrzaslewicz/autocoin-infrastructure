@@ -1,0 +1,26 @@
+---
+# Get ssh keys first to clone all the repositories
+#
+# Provide your own destination for repositories by providing 'repos_destination', e.g.
+# ansible-playbook --extra-vars "repos_destination=/projects/autocoin" clone-repositories.yml
+- name: Clone all needed repositories
+  hosts: localhost
+  vars_files:
+    - '{{ playbook_dir }}/../vars/git-repositories.yml'
+
+  tasks:
+    - name: Clone repository
+      ansible.builtin.git:
+        repo: '{{ item.repo }}'
+        dest: '{{ repos_destination }}/{{ item.name }}'
+        key_file: '{{ item.private_key }}'
+        update: yes
+      loop: '{{ repositories }}'
+
+    - name: Set git to use proper ssh key
+      git_config:
+        name: core.sshCommand
+        repo: '{{ repos_destination }}/{{ item.name }}'
+        scope: local
+        value: 'ssh -i {{ item.private_key }}'
+      loop: '{{ repositories }}'
