@@ -18,12 +18,20 @@
         chdir: '{{ frontend_folder }}'
         executable: /bin/bash
       when: not frontend_node_modules_found.stat.exists
+
     - name: Run frontend
       shell: |
         source ~/.nvm/nvm.sh &&
         nvm install &&
         nvm use &&
-        npm run start &
+        npm run start
+      async: 99999999
+      poll: 0
       args:
         chdir: '{{ frontend_folder }}'
         executable: /bin/bash
+
+    - name: Wait max 20s for port 4200 to be available
+      wait_for:
+        port: 4200
+        timeout: 20

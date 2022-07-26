@@ -5,40 +5,47 @@
     - '{{ playbook_dir }}/../vars/git-repositories.yml'
   vars:
     - autocoin_auth_service_version: '0.0.1-SNAPSHOT'
+    - db_password: 'mysecretpassword'
+    - db_user: 'auth-service-user'
   tasks:
-
     - name: Ensure auth-service-db container is started
       docker_container:
         image: 'postgres:11.0-alpine'
         name: 'autocoin-auth-service-db'
         published_ports: '5432:5432'
         env:
-          POSTGRES_USER: 'auth-service-user'
-          POSTGRES_PASSWORD: 'mysecretpassword'
+          POSTGRES_USER: '{{ db_user }}'
+          POSTGRES_PASSWORD: '{{ db_password }}'
           POSTGRES_DB: 'auth-service-db'
         state: started
+
     - name: Check if auth-service jar is present
       find:
         paths: '{{ auth_service_folder }}/target'
         patterns:
           - 'autocoin-auth-service*.jar'
       register: auth_service_jar_found
+
     - name: Build auth-service jar if needed
-      shell: |
-        source ~/.bashrc &&
-        mvn clean package
+      shell: mvn clean package
+      environment:
+        PATH: "{{ ansible_env.PATH }}:$HOME/.jenv/bin:$HOME/bin/mvn" # To make sure .java-version and mvnvm.properties is picked
       args:
         chdir: '{{ auth_service_folder }}'
         executable: /bin/bash
-        environment:
-          PATH: "{{ ansible_env.PATH }}:$HOME/.jenv/bin:$HOME/bin/mvn" # To make sure .java-version and mvnvm.properties is picked
       when: auth_service_jar_found.files | length == 0
+
     - name: Run auth-service
-      shell: java -jar target/autocoin-auth-service*.jar &
+      shell: >
+        java
+        -Xmx200M
+        -XX:+ExitOnOutOfMemoryError
+        -XX:+HeapDumpOnOutOfMemoryError
+        -jar target/autocoin-auth-service*.jar
       environment:
         JDBC_URL: 'jdbc:postgresql://localhost:5432/auth-service-db'
-        DB_USERNAME: 'auth-service-user'
-        DB_PASSWORD: 'mysecretpassword'
+        DB_USERNAME: '{{ db_user }}'
+        DB_PASSWORD: '{{ db_password }}'
         EMAIL_BOX_HOST: 'mock'
         EMAIL_BOX_PORT: -1
         EMAIL_BOX_USERNAME: noUser
@@ -47,7 +54,13 @@
         USE_MOCK_FILE_EMAIL_SERVICE: true
         initSampleData: true
         PATH: "{{ ansible_env.PATH }}:$HOME/.jenv/bin:$HOME/bin/mvn" # To make sure .java-version and mvnvm.properties is picked
+      async: 99999999
+      poll: 0
       args:
         chdir: '{{ auth_service_folder }}'
         executable: /bin/bash
 
+    - name: Wait max 15s for default port 9002 to be available (defined in application.yml -> server.port)
+      wait_for:
+        port: 9002
+        timeout: 15
