@@ -3,11 +3,20 @@
   hosts: localhost
   vars_files:
     - '{{ playbook_dir }}/../vars/git-repositories.yml'
+    - '{{ playbook_dir }}/ports.yml'
   tasks:
+    - name: Check if service is already running and port is open
+      wait_for:
+        port: '{{ frontend_port }}'
+        timeout: 1
+      ignore_errors: true
+      register: frontend_port_open
+
     - name: Check if frontend node_modules is present
       stat:
         path: '{{ frontend_folder }}/node_modules'
       register: frontend_node_modules_found
+
     - name: Run npm install for frontend if needed
       shell: |
         source ~/.nvm/nvm.sh &&
@@ -17,7 +26,7 @@
       args:
         chdir: '{{ frontend_folder }}'
         executable: /bin/bash
-      when: not frontend_node_modules_found.stat.exists
+      when: frontend_port_open.failed and frontend_node_modules_found.stat.exists
 
     - name: Run frontend
       shell: |
@@ -30,8 +39,10 @@
       args:
         chdir: '{{ frontend_folder }}'
         executable: /bin/bash
+      when: frontend_port_open.failed
 
     - name: Wait max 20s for port 4200 to be available
       wait_for:
         port: 4200
         timeout: 20
+      when: frontend_port_open.failed

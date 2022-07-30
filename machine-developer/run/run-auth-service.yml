@@ -3,8 +3,8 @@
   hosts: localhost
   vars_files:
     - '{{ playbook_dir }}/../vars/git-repositories.yml'
+    - '{{ playbook_dir }}/ports.yml'
   vars:
-    - autocoin_auth_service_version: '0.0.1-SNAPSHOT'
     - db_password: 'mysecretpassword'
     - db_user: 'auth-service-user'
   tasks:
@@ -18,6 +18,17 @@
           POSTGRES_PASSWORD: '{{ db_password }}'
           POSTGRES_DB: 'auth-service-db'
         state: started
+
+    - name: Check if service is already running and port is open
+      wait_for:
+        port: '{{ auth_service_port }}'
+        timeout: 1
+      ignore_errors: true
+      register: auth_service_port_open
+
+    - name: Log port status
+      debug:
+        msg: "{{ auth_service_port_open }}"
 
     - name: Check if auth-service jar is present
       find:
@@ -33,7 +44,7 @@
       args:
         chdir: '{{ auth_service_folder }}'
         executable: /bin/bash
-      when: auth_service_jar_found.files | length == 0
+      when: auth_service_port_open.failed and auth_service_jar_found.files | length == 0
 
     - name: Run auth-service
       shell: >
@@ -59,8 +70,10 @@
       args:
         chdir: '{{ auth_service_folder }}'
         executable: /bin/bash
+      when: auth_service_port_open.failed
 
-    - name: Wait max 15s for default port 9002 to be available (defined in application.yml -> server.port)
+    - name: Wait max 15s for open port
       wait_for:
-        port: 9002
+        port: '{{ auth_service_port | int }}'
         timeout: 15
+      when: auth_service_port_open.failed
