@@ -1,0 +1,61 @@
+---
+- name: Run latest versions of autocoin-balance-monitor
+  hosts: localhost
+  vars_files:
+    - '{{ playbook_dir }}/../vars/git-repositories.yml'
+    - '{{ playbook_dir }}/ports.yml'
+    - '{{ playbook_dir }}/oauth-secrets.yml'
+  tasks:
+    - name: Check if service is already running and port is open
+      wait_for:
+        port: '{{ balance_monitor_port }}'
+        timeout: 1
+      ignore_errors: true
+      register: balance_monitor_service_port_open
+
+    - name: Log port status
+      debug:
+        msg: "{{ balance_monitor_service_port_open }}"
+
+    - name: Check if balance-monitor jar is present
+      find:
+        paths: '{{ balance_monitor_folder }}/target'
+        patterns:
+          - 'autocoin-balance-monitor*.jar'
+      register: balance_monitor_jar_found
+
+    - name: Build balance-monitor jar if needed
+      shell: mvn clean package
+      environment:
+        PATH: "{{ ansible_env.PATH }}:$HOME/.jenv/bin:$HOME/bin/mvn" # To make sure .java-version and mvnvm.properties is picked
+      args:
+        chdir: '{{ balance_monitor_folder }}'
+        executable: /bin/bash
+      when: balance_monitor_service_port_open.failed and balance_monitor_jar_found.files | length == 0
+
+    - name: Run balance-monitor
+      shell: >
+        java
+        -Xmx200M
+        -XX:+ExitOnOutOfMemoryError
+        -XX:+HeapDumpOnOutOfMemoryError
+        -jar target/autocoin-balance-monitor*.jar
+      environment:
+        TELEGRAF_HOSTNAME: metrics.jsonl
+        START_OWN_DB_CONTAINER: true
+        OAUTH2_API_URL: 'http://localhost:{{ auth_service_port }}'
+        OAUTH_CLIENT_SECRET: '{{ oauth2_balance_monitor_secret }}'
+        EXCHANGE_MEDIATOR_API_URL: 'http://localhost:{{ exchange_mediator_port }}'
+        PATH: "{{ ansible_env.PATH }}:$HOME/.jenv/bin:$HOME/bin/mvn" # To make sure .java-version and mvnvm.properties is picked
+      async: 99999999
+      poll: 0
+      args:
+        chdir: '{{ balance_monitor_folder }}'
+        executable: /bin/bash
+      when: balance_monitor_service_port_open.failed
+
+    - name: Wait max 15s for open port
+      wait_for:
+        port: '{{ balance_monitor_port }}'
+        timeout: 15
+      when: balance_monitor_service_port_open.failed

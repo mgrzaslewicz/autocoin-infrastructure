@@ -1,2 +1,4 @@
 auth_service_port: 9002 # defined in application.yml -> server.port
+exchange_mediator_port: 9001 # defined in application.yml -> server.port
+balance_monitor_port: 10022 # defined in AppConfig
 frontend_port: 4200

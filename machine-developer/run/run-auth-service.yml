@@ -4,6 +4,7 @@
   vars_files:
     - '{{ playbook_dir }}/../vars/git-repositories.yml'
     - '{{ playbook_dir }}/ports.yml'
+    - '{{ playbook_dir }}/oauth-secrets.yml'
   vars:
     - db_password: 'mysecretpassword'
     - db_user: 'auth-service-user'
@@ -63,6 +64,7 @@
         EMAIL_BOX_PASSWORD: noPassword
         TELEGRAF_HOSTNAME: metrics.jsonl
         USE_MOCK_FILE_EMAIL_SERVICE: true
+        oauth2Service2ServiceClients: '{{ oauth2_service_2_service_clients }}'
         initSampleData: true
         PATH: "{{ ansible_env.PATH }}:$HOME/.jenv/bin:$HOME/bin/mvn" # To make sure .java-version and mvnvm.properties is picked
       async: 99999999

@@ -1,0 +1,57 @@
+---
+- name: Run latest versions of autocoin-auth-service
+  hosts: localhost
+  vars_files:
+    - '{{ playbook_dir }}/../vars/git-repositories.yml'
+    - '{{ playbook_dir }}/ports.yml'
+    - '{{ playbook_dir }}/oauth-secrets.yml'
+  tasks:
+    - name: Check if service is already running and port is open
+      wait_for:
+        port: '{{ exchange_mediator_port }}'
+        timeout: 1
+      ignore_errors: true
+      register: exchange_mediator_port_open
+
+    - name: Check if mediator-service jar is present
+      find:
+        paths: '{{ exchange_mediator_folder }}/target'
+        patterns:
+          - 'autocoin-exchange-mediator*.jar'
+      register: exchange_mediator_jar_found
+
+    - name: Build exchange-mediator jar if needed
+      shell: mvn clean package
+      environment:
+        PATH: "{{ ansible_env.PATH }}:$HOME/.jenv/bin:$HOME/bin/mvn" # To make sure .java-version and mvnvm.properties is picked
+      args:
+        chdir: '{{ exchange_mediator_folder }}'
+        executable: /bin/bash
+      when: exchange_mediator_port_open.failed and exchange_mediator_jar_found.files | length == 0
+
+    - name: Run exchange-mediator
+      shell: >
+        java
+        -Xmx200M
+        -XX:+ExitOnOutOfMemoryError
+        -XX:+HeapDumpOnOutOfMemoryError
+        -jar target/autocoin-exchange-mediator*.jar
+      environment:
+        autocoinOauth2ServerUrl: http://localhost:9002
+        exchangesApiUrl: http://localhost:9002
+        TELEGRAF_HOSTNAME: metrics.jsonl
+        OAUTH_CLIENT_SECRET: '{{ oauth2_exchange_mediator_secret}}'
+        COINMARKETCAP_API_KEY: cb34dd5f-c4e9-4a6c-bcc7-c060e84093eb
+        PATH: "{{ ansible_env.PATH }}:$HOME/.jenv/bin:$HOME/bin/mvn" # To make sure .java-version and mvnvm.properties is picked
+      async: 99999999
+      poll: 0
+      args:
+        chdir: '{{ exchange_mediator_folder }}'
+        executable: /bin/bash
+      when: exchange_mediator_port_open.failed
+
+    - name: Wait max 15s for open port
+      wait_for:
+        port: '{{ exchange_mediator_port }}'
+        timeout: 15
+      when: exchange_mediator_port_open.failed
