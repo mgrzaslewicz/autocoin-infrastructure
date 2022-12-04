@@ -5,6 +5,7 @@ repos_destination: ~/repos/autocoin
 auth_service_folder: '{{ repos_destination }}/autocoin-auth-service'
 exchange_mediator_folder: '{{ repos_destination }}/autocoin-exchange-mediator'
 balance_monitor_folder: '{{ repos_destination }}/autocoin-balance-monitor'
+arbitrage_monitor_folder: '{{ repos_destination }}/autocoin-balance-monitor'
 frontend_folder: '{{ repos_destination }}/autocoin-trader-frontend'
 
 # order is important for compiling and installing in local maven repository

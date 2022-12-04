@@ -20,6 +20,12 @@
         state: present
         name: openjdk-17-jdk
 
+    - name: Ensure Java 19 is installed
+      become: true
+      apt:
+        state: present
+        name: openjdk-19-jdk
+
     - name: Ensure docker is installed
       become: true
       apt:
@@ -53,10 +59,8 @@
         line: export PATH="$HOME/.jenv/bin:$PATH"
 
     - name: Register JVM versions in jenv
-      shell: |
-        jenv add /usr/lib/jvm/java-1.8.0-openjdk-amd64 &&
-        jenv add /usr/lib/jvm/java-1.14.0-openjdk-amd64 &&
-        jenv add /usr/lib/jvm/java-1.17.0-openjdk-amd64
+
+      shell: jenv add /usr/lib/jvm/java-1.8.0-openjdk-amd64 || jenv add /usr/lib/jvm/java-1.14.0-openjdk-amd64 || jenv add /usr/lib/jvm/java-1.17.0-openjdk-amd64 || jenv add /usr/lib/jvm/java-1.19.0-openjdk-amd64
       environment:
         PATH: "{{ ansible_env.PATH }}:$HOME/.jenv/bin"
       args:
